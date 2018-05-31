@@ -1,0 +1,60 @@
+#!/usr/bin/perl -w
+
+use strict;
+use warnings;
+
+my $dir = shift or die "Usage: $0 directory\n";
+die "Error: directory $dir not exists!\n" if( ! -d $dir );
+
+my $testgit = `git --version 2>&1` or dieme( "Cannot run git command!\n");
+
+my ($sec,$min,$hour,$day,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$year += 1900;
+$mon = ($mon < 10 ? "0$mon" : $mon);
+$day = ($day < 10 ? "0$day" : $day);
+my $date = "$year-$mon-$day $hour:$min:$sec";
+
+chdir $dir;
+
+# 
+# first step: git pull
+#
+my $git_pull = `git pull 2>&1` or dieme("cannot run git pull!");
+
+
+#
+# second step: git status -s
+#
+my $tmp;
+my $need_commit = 0;
+my @lines = `git status -s 2>&1` or dieme("cannot run git status -s");
+
+foreach my $line (@lines) {
+    chomp $line;
+    if( $line =~ /\?\?\s(.*)/ ) {
+        $need_commit = 1;
+        
+        $tmp = `git add $1 2>&1`;
+    } elsif($line =~ /(\w+)\s(.*)/) {
+        $need_commit = 1;
+    
+        next if ($1 eq "D" );
+        $tmp = `git add $2 2>&1`;
+    }
+}
+
+#
+# last step: commit and push
+#
+if ( $need_commit == 1) {
+    $tmp = `git commit -a -m "Update on $date" 2>&1` or dieme("Error running git commit", $tmp);
+    $tmp = `git push 2>&1` or dieme("Error running git push", $tmp);
+}
+
+sub dieme {
+    my $msg = shift;
+    my $tmp = shift || '';
+    
+    my $full_msg = "ERROR running git-web-backup on directory $dir\nError msg: $msg\n\n$tmp\n";
+    die $full_msg;
+}
