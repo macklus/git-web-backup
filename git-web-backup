@@ -27,7 +27,11 @@ my $git_pull = `git pull 2>&1` or dieme("cannot run git pull!");
 #
 my $tmp;
 my $need_commit = 0;
-my @lines = `git status -s 2>&1` or dieme("cannot run git status -s");
+
+my @lines = `git status -s 2>&1`;
+if($? != 0 ) {
+	dieme("cannot run git status -s");
+}
 
 foreach my $line (@lines) {
     chomp $line;
